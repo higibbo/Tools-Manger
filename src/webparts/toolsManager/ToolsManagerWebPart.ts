@@ -12,14 +12,20 @@ import * as strings from 'ToolsManagerWebPartStrings';
 import ToolsManager from './components/ToolsManager';
 import { IToolsManagerProps } from './components/IToolsManagerProps';
 
+//import { spfi, SPFI, SPFx } from "@pnp/sp";
+import "@pnp/sp/webs";
+import "@pnp/sp/lists";
+import "@pnp/sp/items";
+
 export interface IToolsManagerWebPartProps {
   description: string;
 }
 
-export default class ToolsManagerWebPart extends BaseClientSideWebPart<IToolsManagerWebPartProps> {
+export default class ToolsManagerWebPart extends BaseClientSideWebPart<IToolsManagerProps> {
 
   private _isDarkTheme: boolean = false;
   private _environmentMessage: string = '';
+ // private sp: SPFI;
 
   public render(): void {
     const element: React.ReactElement<any> = React.createElement(
@@ -32,18 +38,21 @@ export default class ToolsManagerWebPart extends BaseClientSideWebPart<IToolsMan
         userDisplayName: this.context.pageContext.user.displayName,
         context: this.context,
         title: this.properties.title
+      }
     );
 
     ReactDom.render(element, this.domElement);
   }
 
   protected onInit(): Promise<void> {
-    return this._getEnvironmentMessage().then(message => {
-      this._environmentMessage = message;
+    return super.onInit().then(_ => {
+      // Initialize PnPjs
+    //  this.sp = spfi().using(SPFx(this.context));
+      return this._getEnvironmentMessage().then(message => {
+        this._environmentMessage = message;
+      });
     });
   }
-
-
 
   private _getEnvironmentMessage(): Promise<string> {
     if (!!this.context.sdks.microsoftTeams) { // running in Teams, office.com or Outlook

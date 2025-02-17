@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   Stack,
   SearchBox,
@@ -15,12 +15,25 @@ import {
  // ICommandBarItemProps
 } from '@fluentui/react';
 import { IToolsManagerProps } from './IToolsManagerProps';
+import { SPFx, spfi as spfiFactory } from "@pnp/sp";
+//import { IList, IListEnsureResult } from "@pnp/sp/lists";
+import "@pnp/sp/webs";
+import "@pnp/sp/lists";
+import "@pnp/sp/items";
+//import { SPFI, spfi as spfiFactory, SPFx } from "@pnp/sp";
 
 interface ITool extends IObjectWithKey {
   id: string;
   title: string;
   icon: string;
   url: string;
+}
+
+interface IToolListItem {
+  Id: string;
+  Title: string;
+  IconUrl: string;
+  ToolUrl: string;
 }
 
 // Icon definitions
@@ -74,11 +87,36 @@ const ToolsManager: React.FC<IToolsManagerProps> = (props) => {
     { id: '3', title: 'Fidelity', icon: props.context.pageContext.web.absoluteUrl + '/_layouts/15/images/placeholder.png', url: '#' }
   ]);
   
-  const [availableTools] = useState<ITool[]>([
-    { id: '4', title: 'ATLAS Effects', icon: props.context.pageContext.web.absoluteUrl + '/_layouts/15/images/placeholder.png', url: '#' },
-    { id: '5', title: 'Browse Learning', icon: props.context.pageContext.web.absoluteUrl + '/_layouts/15/images/placeholder.png', url: '#' },
-    { id: '6', title: 'Business Cards', icon: props.context.pageContext.web.absoluteUrl + '/_layouts/15/images/placeholder.png', url: '#' }
-  ]);
+  const [availableTools, setAvailableTools] = useState<ITool[]>([]);
+
+  // Add SP instance
+  const sp = spfi(props);
+
+  // Add useEffect to fetch tools
+  useEffect(() => {
+    const fetchTools = async () => {
+      try {
+        // Replace "ToolsList" with your actual SharePoint list name
+        const items: IToolListItem[] = await sp.web.lists
+          .getByTitle("ToolsList")
+          .items
+          .select("Id", "Title", "IconUrl", "ToolUrl")();
+
+        const tools: ITool[] = items.map(item => ({
+          id: item.Id,
+          title: item.Title,
+          icon: item.IconUrl || props.context.pageContext.web.absoluteUrl + '/_layouts/15/images/placeholder.png',
+          url: item.ToolUrl || '#'
+        }));
+
+        setAvailableTools(tools);
+      } catch (error) {
+        console.error('Error fetching tools:', error);
+      }
+    };
+
+    fetchTools();
+  }, []); // Empty dependency array means this runs once when component mounts
 
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -221,3 +259,6 @@ const ToolsManager: React.FC<IToolsManagerProps> = (props) => {
 };
 
 export default ToolsManager;
+function spfi(props: IToolsManagerProps) {
+  return spfiFactory().using(SPFx(props.context));
+}
