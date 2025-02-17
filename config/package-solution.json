@@ -1,0 +1,40 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
+  "solution": {
+    "name": "tools-manager-client-side-solution",
+    "id": "620bc4e9-98ce-4bff-abc9-593405f6d629",
+    "version": "1.0.0.0",
+    "includeClientSideAssets": true,
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "developer": {
+      "name": "",
+      "websiteUrl": "",
+      "privacyUrl": "",
+      "termsOfUseUrl": "",
+      "mpnId": "Undefined-1.20.0"
+    },
+    "metadata": {
+      "shortDescription": {
+        "default": "ToolsManager description"
+      },
+      "longDescription": {
+        "default": "ToolsManager description"
+      },
+      "screenshotPaths": [],
+      "videoUrl": "",
+      "categories": []
+    },
+    "features": [
+      {
+        "title": "tools-manager Feature",
+        "description": "The feature that activates elements of the tools-manager solution.",
+        "id": "502af799-ab97-4f46-ba61-9e42ed8b5f0b",
+        "version": "1.0.0.0"
+      }
+    ]
+  },
+  "paths": {
+    "zippedPackage": "solution/tools-manager.sppkg"
+  }
+}
