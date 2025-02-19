@@ -9,10 +9,10 @@ import {
   IColumn,
   SelectionMode,
   IObjectWithKey,
-//  DragDropHelper,
   getTheme,
   mergeStyleSets,
- // ICommandBarItemProps
+  IDragDropEvents,
+  IDragDropContext
 } from '@fluentui/react';
 import { IToolsManagerProps } from './IToolsManagerProps';
 import { SPFx, spfi as spfiFactory } from "@pnp/sp";
@@ -78,6 +78,14 @@ const classNames = mergeStyleSets({
     display: 'flex',
     gap: '4px',
   },
+  dragEnter: {
+    backgroundColor: theme.palette.neutralLight,
+    border: `1px dashed ${theme.palette.themePrimary}`
+  },
+  dragOver: {
+    backgroundColor: theme.palette.neutralLighter,
+    border: `1px dashed ${theme.palette.themePrimary}`
+  }
 });
 
 const ToolsManager: React.FC<IToolsManagerProps> = (props) => {
@@ -128,6 +136,7 @@ const ToolsManager: React.FC<IToolsManagerProps> = (props) => {
       fieldName: 'title',
       minWidth: 100,
       maxWidth: 200,
+      isResizable: false,
       onRender: (item: ITool) => (
         <Stack horizontal verticalAlign="center" tokens={{ childrenGap: 8 }}>
           <img src={item.icon} alt="" width={24} height={24} />
@@ -218,6 +227,28 @@ const ToolsManager: React.FC<IToolsManagerProps> = (props) => {
     tool => tool.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const dragDropEvents: IDragDropEvents = {
+    canDrop: (dropContext?: IDragDropContext) => true,
+    canDrag: (item?: any) => true,
+    onDragStart: (item?: any, itemIndex?: number) => {
+      return undefined;
+    },
+    onDrop: (item?: any, event?: DragEvent) => {
+      if (item && event) {
+        const draggedItemIndex = selectedTools.findIndex(tool => tool.id === item.id);
+        const dropLocation = event.currentTarget as HTMLElement;
+        const dropIndex = parseInt(dropLocation.getAttribute('data-index') || '0', 10);
+
+        if (draggedItemIndex !== dropIndex) {
+          const newTools = [...selectedTools];
+          const [draggedItem] = newTools.splice(draggedItemIndex, 1);
+          newTools.splice(dropIndex, 0, draggedItem);
+          setSelectedTools(newTools);
+        }
+      }
+    }
+  };
+
   return (
     <div className={classNames.container}>
       <Stack tokens={{ childrenGap: 20 }}>
@@ -239,6 +270,9 @@ const ToolsManager: React.FC<IToolsManagerProps> = (props) => {
               selectionMode={SelectionMode.none}
               compact={true}
               isHeaderVisible={false}
+              dragDropEvents={dragDropEvents}
+              setKey="set"
+             
             />
           </Stack.Item>
 
