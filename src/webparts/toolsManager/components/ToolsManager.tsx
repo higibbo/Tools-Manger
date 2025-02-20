@@ -21,6 +21,10 @@ import "@pnp/sp/webs";
 import "@pnp/sp/lists";
 import "@pnp/sp/items";
 //import { SPFI, spfi as spfiFactory, SPFx } from "@pnp/sp";
+import { MSGraphClientV3 } from '@microsoft/sp-http';
+
+import "@pnp/graph/users";
+import "@pnp/graph/files";
 
 interface ITool extends IObjectWithKey {
   id: string;
@@ -89,41 +93,62 @@ const classNames = mergeStyleSets({
 });
 
 const ToolsManager: React.FC<IToolsManagerProps> = (props) => {
-  const [selectedTools, setSelectedTools] = useState<ITool[]>([
-    { id: '1', title: 'Workday', icon: props.context.pageContext.web.absoluteUrl + '/_layouts/15/images/placeholder.png', url: '#' },
-    { id: '2', title: 'Time Mgr', icon: props.context.pageContext.web.absoluteUrl + '/_layouts/15/images/placeholder.png', url: '#' },
-    { id: '3', title: 'Fidelity', icon: props.context.pageContext.web.absoluteUrl + '/_layouts/15/images/placeholder.png', url: '#' }
-  ]);
+  const [selectedTools, setSelectedTools] = useState<ITool[]>([]);
   
   const [availableTools, setAvailableTools] = useState<ITool[]>([]);
 
   // Add SP instance
   const sp = spfi(props);
 
+  const FILE_NAME = 'selected-tools.json';
+  const FILE_PATH = `/drive/special/approot:/${FILE_NAME}:/`;
+
+  const handleToolsFile = async () => {
+    try {
+      const graphClient: MSGraphClientV3 = await props.context.msGraphClientFactory.getClient('3');
+      
+      // Try to read the file
+      try {
+        const response = await graphClient
+          .api(FILE_PATH + 'content')
+          .get();
+        
+        const tools = await response.json();
+        setSelectedTools(tools);
+      } catch (error) {
+        // File doesn't exist, create it with default tools
+        const defaultTools = [
+          { id: '1', title: 'Workday', icon: props.context.pageContext.web.absoluteUrl + '/_layouts/15/images/placeholder.png', url: '#' },
+          { id: '2', title: 'Time Mgr', icon: props.context.pageContext.web.absoluteUrl + '/_layouts/15/images/placeholder.png', url: '#' },
+          { id: '3', title: 'Fidelity', icon: props.context.pageContext.web.absoluteUrl + '/_layouts/15/images/placeholder.png', url: '#' }
+        ];
+
+        await graphClient
+          .api(FILE_PATH + 'content')
+          .put(JSON.stringify(defaultTools));
+
+        setSelectedTools(defaultTools);
+      }
+    } catch (error) {
+      console.error('Error handling tools file:', error);
+    }
+  };
+
+  const saveToolsToFile = async (tools: ITool[]) => {
+    try {
+      const graphClient: MSGraphClientV3 = await props.context.msGraphClientFactory.getClient('3');
+      
+      await graphClient
+        .api(FILE_PATH + 'content')
+        .put(JSON.stringify(tools));
+    } catch (error) {
+      console.error('Error saving tools:', error);
+    }
+  };
+
   // Add useEffect to fetch tools
   useEffect(() => {
-    const fetchTools = async () => {
-      try {
-        // Replace "ToolsList" with your actual SharePoint list name
-        const items: IToolListItem[] = await sp.web.lists
-          .getByTitle("ToolsList")
-          .items
-          .select("Id", "Title", "IconUrl", "ToolUrl")();
-
-        const tools: ITool[] = items.map(item => ({
-          id: item.Id,
-          title: item.Title,
-          icon: item.IconUrl || props.context.pageContext.web.absoluteUrl + '/_layouts/15/images/placeholder.png',
-          url: item.ToolUrl || '#'
-        }));
-
-        setAvailableTools(tools);
-      } catch (error) {
-        console.error('Error fetching tools:', error);
-      }
-    };
-
-    fetchTools();
+    handleToolsFile();
   }, []); // Empty dependency array means this runs once when component mounts
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -211,16 +236,21 @@ const ToolsManager: React.FC<IToolsManagerProps> = (props) => {
     const [movedItem] = newTools.splice(fromIndex, 1);
     newTools.splice(toIndex, 0, movedItem);
     setSelectedTools(newTools);
+    saveToolsToFile(newTools);
   }, [selectedTools]);
 
   const addTool = (tool: ITool) => {
     if (!selectedTools.find(t => t.id === tool.id)) {
-      setSelectedTools([...selectedTools, tool]);
+      const newTools = [...selectedTools, tool];
+      setSelectedTools(newTools);
+      saveToolsToFile(newTools);
     }
   };
 
   const removeTool = (toolId: string) => {
-    setSelectedTools(selectedTools.filter(tool => tool.id !== toolId));
+    const newTools = selectedTools.filter(tool => tool.id !== toolId);
+    setSelectedTools(newTools);
+    saveToolsToFile(newTools);
   };
 
   const filteredAvailableTools = availableTools.filter(
